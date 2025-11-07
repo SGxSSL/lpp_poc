@@ -7,6 +7,9 @@ import logging
 
 from app.core.database import get_db
 from app.core.logger import setup_logging
+from app.routers import lead_router
+
+
 
 # ---------------------------------------------------------
 # App Initialization
@@ -35,6 +38,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(lead_router.router)
 
 # ---------------------------------------------------------
 # Health & DB Test Endpoints
