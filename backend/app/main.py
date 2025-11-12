@@ -7,8 +7,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.logger import setup_logging
-from app.routers import lead_router
-
+from app.routers import lead_router, officer_router, analysis
 
 
 # ---------------------------------------------------------
@@ -28,7 +27,7 @@ app = FastAPI(
 # ---------------------------------------------------------
 origins = [
     "http://localhost:3000",
-    "https://your-frontend-domain.com"
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
@@ -40,6 +39,8 @@ app.add_middleware(
 )
 
 app.include_router(lead_router.router)
+app.include_router(officer_router.router)
+app.include_router(analysis.router)
 
 # ---------------------------------------------------------
 # Health & DB Test Endpoints
