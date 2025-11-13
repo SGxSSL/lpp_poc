@@ -11,12 +11,13 @@ async def get_all_leads(db: AsyncSession):
     return result.scalars().all()
 
 async def get_lead_with_details(db: AsyncSession, lead_id: int):
-    # Query lead with related call logs and officer details
+    # Query lead with related call logs, officer details, and unstructured analysis
     query = (
         select(Lead)
         .options(
             selectinload(Lead.call_logs),
-            selectinload(Lead.call_logs).joinedload(CallLog.officer)
+            selectinload(Lead.call_logs).joinedload(CallLog.officer),
+            selectinload(Lead.call_logs).selectinload(CallLog.unstructured_analyses)
         )
         .where(Lead.id == lead_id)
     )

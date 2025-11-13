@@ -84,3 +84,174 @@ async def calculate_score(lead_id: int, db: AsyncSession = Depends(get_db)):
 
     print(f"[DEBUG] 📤 Response: {response}")
     return response
+
+from sqlalchemy.future import select
+
+from app.models.unstructured_analysis import UnstructuredAnalysis
+
+
+
+@router.get("/unstructured/{call_id}")
+async def get_unstructured_analysis(call_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Fetch the full unstructured AI analysis (Gemini output)
+    for a given call_id from the database.
+    """
+    # ✅ Check if call exists
+    call = await db.get(CallLog, call_id)
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    # ✅ Get associated unstructured analysis
+    result = await db.execute(
+        select(UnstructuredAnalysis).where(UnstructuredAnalysis.call_id == call_id)
+    )
+    analysis = result.scalars().first()
+
+    if not analysis:
+        raise HTTPException(status_code=404, detail="No unstructured analysis found for this call")
+
+    return {
+        "message": "✅ Unstructured analysis fetched successfully",
+        "data": {
+            "call_id": analysis.call_id,
+            "model_name": analysis.model_name,
+            "sentiment": analysis.sentiment,
+            "tone": analysis.tone,
+            "intent_type": analysis.intent_type,
+            "intent_strength": analysis.intent_strength,
+            "decision_stage": analysis.decision_stage,
+            "conversion_probability": analysis.conversion_probability,
+            "keywords": analysis.keywords,
+            "topics_discussed": analysis.topics_discussed,
+            "entity_mentions": analysis.entity_mentions,
+            "speech_acts": analysis.speech_acts,
+            "discourse_relations": analysis.discourse_relations,
+            "framing_style": analysis.framing_style,
+            "deception_markers": analysis.deception_markers,
+            "pain_points": analysis.pain_points,
+            "objections": analysis.objections,
+            "clarity_score": analysis.clarity_score,
+            "trust_score": analysis.trust_score,
+            "emotion_profile": analysis.emotion_profile,
+            "dominant_emotion": analysis.dominant_emotion,
+            "empathy_score": analysis.empathy_score,
+            "politeness_level": analysis.politeness_level,
+            "formality_level": analysis.formality_level,
+            "next_actions": analysis.next_actions,
+            "followup_priority": analysis.followup_priority,
+            "conversation_phases": analysis.conversation_phases,
+            "cooperation_index": analysis.cooperation_index,
+            "dominance_score": analysis.dominance_score,
+            "talk_ratio": analysis.talk_ratio,
+            "interruptions": analysis.interruptions,
+            "response_latency": analysis.response_latency,
+            "summary_ai": analysis.summary_ai,
+            "outcome_classification": analysis.outcome_classification,
+            "highlights": analysis.highlights,
+            "themes": analysis.themes,
+            "confidence": analysis.confidence,
+            "created_at": analysis.created_at,
+        },
+    }
+
+
+@router.get("/debug/lead/{lead_id}")
+async def debug_lead_details(lead_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    🔍 DEBUG ENDPOINT: Check if lead details with unstructured analysis is working
+    """
+    from app.crud import lead_crud
+    from app.schemas.lead_detail import LeadDetailResponse
+    
+    lead = await lead_crud.get_lead_with_details(db, lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Check data presence
+    debug_info = {
+        "lead_id": lead.id,
+        "lead_name": lead.name,
+        "call_logs_count": len(lead.call_logs) if lead.call_logs else 0,
+        "call_logs_details": []
+    }
+    
+    if lead.call_logs:
+        for call in lead.call_logs:
+            call_info = {
+                "call_id": call.id,
+                "call_date": call.call_date,
+                "unstructured_analyses_count": len(call.unstructured_analyses) if call.unstructured_analyses else 0,
+                "officer": call.officer.name if call.officer else "No officer"
+            }
+            
+            if call.unstructured_analyses:
+                call_info["unstructured_analyses_sample"] = [
+                    {
+                        "id": ua.id,
+                        "sentiment": ua.sentiment,
+                        "tone": ua.tone,
+                        "created_at": str(ua.created_at)
+                    }
+                    for ua in call.unstructured_analyses[:1]
+                ]
+            
+            debug_info["call_logs_details"].append(call_info)
+    
+    return {
+        "message": "🔍 Debug info for lead details",
+        "debug": debug_info,
+        "schema_validation": "Attempting to convert to LeadDetailResponse...",
+        "full_data": {
+            "id": lead.id,
+            "name": lead.name,
+            "email": lead.email,
+            "phone": lead.phone,
+            "credit_score": lead.credit_score,
+            "interest_level": lead.interest_level,
+            "last_contact_date": lead.last_contact_date,
+            "source": lead.source,
+            "status": lead.status,
+            "lead_type": lead.lead_type,
+            "created_at": lead.created_at,
+            "call_logs": [
+                {
+                    "id": call.id,
+                    "lead_id": call.lead_id,
+                    "officer_id": call.officer_id,
+                    "call_date": call.call_date,
+                    "duration_minutes": call.duration_minutes,
+                    "outcome": call.outcome,
+                    "channel": call.channel,
+                    "transcription": call.transcription[:100] + "..." if call.transcription else None,
+                    "summary": call.summary,
+                    "intent": call.intent,
+                    "objections": call.objections,
+                    "sentiment": call.sentiment,
+                    "created_at": call.created_at,
+                    "officer": {
+                        "id": call.officer.id,
+                        "name": call.officer.name,
+                        "region": call.officer.region,
+                        "specialty": call.officer.specialty,
+                        "experience_years": call.officer.experience_years,
+                        "created_at": call.officer.created_at
+                    } if call.officer else None,
+                    "unstructured_analyses": [
+                        {
+                            "id": ua.id,
+                            "call_id": ua.call_id,
+                            "sentiment": ua.sentiment,
+                            "tone": ua.tone,
+                            "intent_type": ua.intent_type,
+                            "keywords": ua.keywords,
+                            "pain_points": ua.pain_points,
+                            "created_at": ua.created_at
+                        }
+                        for ua in call.unstructured_analyses
+                    ] if call.unstructured_analyses else []
+                }
+                for call in lead.call_logs
+            ] if lead.call_logs else []
+        }
+    }

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, PhoneCall, Mail, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Brain } from "lucide-react";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useState, useEffect } from "react";
 import { getLeadDetails } from "@/services/leadService";
@@ -10,7 +10,8 @@ export default function LeadModal({ lead, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedLogs, setExpandedLogs] = useState({});
-  console.log('LeadModal lead:', leadDetails);
+  const [expandedAI, setExpandedAI] = useState({});
+
   useEffect(() => {
     const fetchLeadDetails = async () => {
       try {
@@ -34,10 +35,11 @@ export default function LeadModal({ lead, onClose }) {
   ];
 
   const toggleExpand = (index) => {
-    setExpandedLogs((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+    setExpandedLogs((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const toggleAIExpand = (index) => {
+    setExpandedAI((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   return (
@@ -72,11 +74,19 @@ export default function LeadModal({ lead, onClose }) {
             <Info label="Created At" value={new Date(lead.created_at).toLocaleDateString()} />
           </div>
 
-
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">AI Insights</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={chartData}>
+                <XAxis dataKey="label" />
+                <Tooltip />
+                <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* RIGHT: Officer + Call Logs */}
-
+        {/* RIGHT: Call Logs & AI */}
         <div className="w-3/5 p-6 overflow-y-auto">
           {loading && (
             <div className="text-center mt-20">
@@ -93,151 +103,124 @@ export default function LeadModal({ lead, onClose }) {
 
           {!loading && !error && leadDetails && (
             <>
-              {/* Officer Info */}
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">AI Insights</h3>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="label" />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-                <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Assigned Officer</h3>
-                <div className="bg-gray-50 p-4 rounded-lg grid grid-cols-2 gap-4 text-sm text-gray-700">
-                  <p><span className="font-medium">Officer ID:</span> {leadDetails.officer?.id || "N/A"}</p>
-                  <p><span className="font-medium">Name:</span> {leadDetails.officer?.name || "N/A"}</p>
-                  <p><span className="font-medium">Region:</span> {leadDetails.officer?.region || "N/A"}</p>
-                  <p><span className="font-medium">Specialty:</span> {leadDetails.officer?.specialty || "N/A"}</p>
-                  <p><span className="font-medium">Experience:</span> {leadDetails.officer?.experience_years || 0} years</p>
-                  <p><span className="font-medium">Joined:</span> {leadDetails.officer?.created_at ? new Date(leadDetails.officer.created_at).toLocaleDateString() : "N/A"}</p>
-                </div>
-              </div>
-
-              {/* Call Logs */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Call History</h3>
-                {leadDetails.call_logs?.length > 0 ? (
-                  <div className="space-y-4">
-                    {leadDetails.call_logs.map((log, index) => (
-                      <div
-                        key={index}
-                        className="border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition"
-                      >
-                        {/* Header with basic info */}
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="grow">
-                            <div className="flex items-center gap-3">
-                              <p className="text-sm font-medium text-gray-900">
-                                Call ID: {log.id}
-                              </p>
-                              <p className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">
-                                {log.channel || "N/A"}
-                              </p>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Created: {new Date(log.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-900">
-                              {new Date(log.call_date).toLocaleString()}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Duration: {log.duration_minutes} minutes
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Call Details Grid */}
-                        <div className="grid grid-cols-2 gap-4 mb-3 bg-gray-50 p-3 rounded-lg">
-                          <div className="space-y-2">
-                            <p className="text-sm">
-                              <span className="font-medium">Lead ID:</span>{" "}
-                              <span className="text-gray-600">{log.lead_id || "N/A"}</span>
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">Officer ID:</span>{" "}
-                              <span className="text-gray-600">{log.officer_id || "N/A"}</span>
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">Intent:</span>{" "}
-                              <span className="text-gray-600">{log.intent || "N/A"}</span>
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">Outcome:</span>{" "}
-                              <span className="text-gray-600">{log.outcome || "N/A"}</span>
-                            </p>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm">
-                              <span className="font-medium">Sentiment:</span>{" "}
-                              <span className="text-gray-600">{log.sentiment || "N/A"}</span>
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">Objections:</span>{" "}
-                              <span className="text-gray-600">{log.objections || "N/A"}</span>
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">Channel:</span>{" "}
-                              <span className="text-gray-600">{log.channel || "N/A"}</span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Summary Section */}
-                        <div className="bg-white border border-gray-100 rounded p-3 mb-3">
-                          <p className="font-medium text-sm mb-2">Summary</p>
-                          <p className="text-sm text-gray-600">
-                            {log.summary || "No summary available"}
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Call History</h3>
+              {leadDetails.call_logs?.length > 0 ? (
+                <div className="space-y-4">
+                  {leadDetails.call_logs.map((log, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition"
+                    >
+                      {/* Header */}
+                      <div className="flex justify-between items-center mb-3">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            Call ID: {log.id} — {log.channel || "N/A"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(log.call_date).toLocaleString()}
                           </p>
                         </div>
-
-
-                        {/* Transcription Read More */}
-                        {log.transcription && (
-                          <div>
-                            <p className="font-medium text-sm mb-1">Transcription</p>
-                            {expandedLogs[index] ? (
-                              <>
-                                <div className="bg-white border border-gray-100 rounded p-3">
-                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                    {log.transcription}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => toggleExpand(index)}
-                                  className="mt-2 text-indigo-600 text-sm flex items-center gap-1 hover:text-indigo-800"
-                                >
-                                  <ChevronUp size={14} /> Show Less
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <div className="bg-white border border-gray-100 rounded p-3">
-                                  <p className="text-sm text-gray-700 line-clamp-3">
-                                    {log.transcription}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => toggleExpand(index)}
-                                  className="mt-2 text-indigo-600 text-sm flex items-center gap-1 hover:text-indigo-800"
-                                >
-                                  <ChevronDown size={14} /> Show More
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                        <p className="text-sm text-gray-600">
+                          Duration: {log.duration_minutes} min
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 italic">No call logs available.</p>
-                )}
-              </div>
+
+                      {/* Summary */}
+                      <p className="text-sm text-gray-700 mb-3">
+                        <span className="font-medium">Summary:</span>{" "}
+                        {log.summary || "No summary available"}
+                      </p>
+
+                      {/* Transcription */}
+                      {log.transcription && (
+                        <div className="mb-3">
+                          <p className="font-medium text-sm mb-1">Transcription</p>
+                          {expandedLogs[index] ? (
+                            <>
+                              <div className="bg-white border border-gray-100 rounded p-3">
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                  {log.transcription}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => toggleExpand(index)}
+                                className="mt-2 text-indigo-600 text-sm flex items-center gap-1 hover:text-indigo-800"
+                              >
+                                <ChevronUp size={14} /> Show Less
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <div className="bg-white border border-gray-100 rounded p-3">
+                                <p className="text-sm text-gray-700 line-clamp-3">
+                                  {log.transcription}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => toggleExpand(index)}
+                                className="mt-2 text-indigo-600 text-sm flex items-center gap-1 hover:text-indigo-800"
+                              >
+                                <ChevronDown size={14} /> Show More
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 🧠 AI Analysis Section */}
+                      {log.unstructured_analyses?.length > 0 && (
+                        <div className="mt-4 border-t border-gray-100 pt-3">
+                          <button
+                            onClick={() => toggleAIExpand(index)}
+                            className="w-full flex justify-between items-center text-indigo-700 font-medium text-sm hover:text-indigo-900"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Brain size={16} /> AI Analysis
+                            </span>
+                            {expandedAI[index] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+
+                          {expandedAI[index] && (
+                            <div className="mt-3 bg-gray-50 p-3 rounded-lg text-sm text-gray-700 space-y-2">
+                              {log.unstructured_analyses.map((analysis, i) => (
+                                <div key={i} className="border border-gray-100 rounded-lg p-3 mb-2 bg-white">
+                                  <p><span className="font-medium">Sentiment:</span> {analysis.sentiment}</p>
+                                  <p><span className="font-medium">Intent:</span> {analysis.intent_type}</p>
+                                  <p><span className="font-medium">Intent Strength:</span> {analysis.intent_strength}</p>
+                                  <p><span className="font-medium">Decision Stage:</span> {analysis.decision_stage}</p>
+                                  <p><span className="font-medium">Confidence:</span> {analysis.confidence}</p>
+                                  <p><span className="font-medium">Conversion Probability:</span> {analysis.conversion_probability}</p>
+
+                                  <div className="mt-2">
+                                    <p className="font-medium mb-1">Summary:</p>
+                                    <p className="text-gray-600">{analysis.summary_ai}</p>
+                                  </div>
+
+                                  {analysis.keywords?.length > 0 && (
+                                    <div className="mt-2">
+                                      <p className="font-medium mb-1">Keywords:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {analysis.keywords.map((k, j) => (
+                                          <span key={j} className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">
+                                            {typeof k === "string" ? k : k.keyword}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">No call logs available.</p>
+              )}
             </>
           )}
         </div>
