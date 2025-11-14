@@ -7,7 +7,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.logger import setup_logging
-from app.routers import lead_router, officer_router, analysis
+from app.routers import lead_router, officer_router, analysis, dashboard_router
 
 
 # ---------------------------------------------------------
@@ -41,6 +41,7 @@ app.add_middleware(
 app.include_router(lead_router.router)
 app.include_router(officer_router.router)
 app.include_router(analysis.router)
+app.include_router(dashboard_router.router)
 
 # ---------------------------------------------------------
 # Health & DB Test Endpoints
