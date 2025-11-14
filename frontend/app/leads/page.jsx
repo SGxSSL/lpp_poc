@@ -1,24 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import LeadModal from "@/components/LeadModal";
 import { getAllLeads } from "@/services/leadService";
 
 export default function LeadsPage() {
+  const router = useRouter();
   const [selectedLead, setSelectedLead] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({
+    key: "name",
+    direction: "asc",
+  });
 
   // Sorting function
   const handleSort = (key) => {
     setSortConfig((prevSort) => ({
       key,
       direction:
-        prevSort.key === key && prevSort.direction === 'asc' ? 'desc' : 'asc',
+        prevSort.key === key && prevSort.direction === "asc" ? "desc" : "asc",
     }));
   };
 
@@ -27,7 +32,7 @@ export default function LeadsPage() {
     if (sortConfig.key !== column) {
       return <ChevronUp className="w-4 h-4 text-gray-400" />;
     }
-    return sortConfig.direction === 'asc' ? (
+    return sortConfig.direction === "asc" ? (
       <ChevronUp className="w-4 h-4 text-indigo-600" />
     ) : (
       <ChevronDown className="w-4 h-4 text-indigo-600" />
@@ -84,25 +89,25 @@ export default function LeadsPage() {
       );
     })
     .sort((a, b) => {
-      const aValue = a[sortConfig.key] || '';
-      const bValue = b[sortConfig.key] || '';
-      
+      const aValue = a[sortConfig.key] || "";
+      const bValue = b[sortConfig.key] || "";
+
       // Handle numeric fields
-      if (['credit_score', 'interest_level'].includes(sortConfig.key)) {
+      if (["credit_score", "interest_level"].includes(sortConfig.key)) {
         const numA = Number(aValue) || 0;
         const numB = Number(bValue) || 0;
-        return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+        return sortConfig.direction === "asc" ? numA - numB : numB - numA;
       }
-      
+
       // Handle dates
-      if (sortConfig.key === 'last_contact_date') {
+      if (sortConfig.key === "last_contact_date") {
         const dateA = aValue ? new Date(aValue).getTime() : 0;
         const dateB = bValue ? new Date(bValue).getTime() : 0;
-        return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+        return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
       }
 
       // Handle strings
-      return sortConfig.direction === 'asc'
+      return sortConfig.direction === "asc"
         ? String(aValue).localeCompare(String(bValue))
         : String(bValue).localeCompare(String(aValue));
     });
@@ -137,72 +142,72 @@ export default function LeadsPage() {
           <table className=" divide-y divide-gray-100 table-fixed w-full">
             <thead className="bg-gray-50 text-gray-600 text-sm sticky top-0 z-10">
               <tr>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('name')}
+                  onClick={() => handleSort("name")}
                 >
                   <div className="flex items-center gap-1">
                     Name
                     <SortIndicator column="name" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('email')}
+                  onClick={() => handleSort("email")}
                 >
                   <div className="flex items-center gap-1">
                     Email
                     <SortIndicator column="email" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('phone')}
+                  onClick={() => handleSort("phone")}
                 >
                   <div className="flex items-center gap-1">
                     Phone
                     <SortIndicator column="phone" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('lead_type')}
+                  onClick={() => handleSort("lead_type")}
                 >
                   <div className="flex items-center gap-1">
                     Lead Type
                     <SortIndicator column="lead_type" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('credit_score')}
+                  onClick={() => handleSort("credit_score")}
                 >
                   <div className="flex items-center gap-1">
                     Credit Score
                     <SortIndicator column="credit_score" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-20 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('interest_level')}
+                  onClick={() => handleSort("interest_level")}
                 >
                   <div className="flex items-center gap-1">
                     Interest Level
                     <SortIndicator column="interest_level" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('status')}
+                  onClick={() => handleSort("status")}
                 >
                   <div className="flex items-center gap-1">
                     Status
                     <SortIndicator column="status" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="py-3 px-4 text-left w-32 cursor-pointer hover:bg-gray-100 group"
-                  onClick={() => handleSort('last_contact_date')}
+                  onClick={() => handleSort("last_contact_date")}
                 >
                   <div className="flex items-center gap-1">
                     Last Contact
@@ -216,7 +221,7 @@ export default function LeadsPage() {
                 <tr
                   key={lead.id}
                   className="hover:bg-indigo-50/60 cursor-pointer transition wrap-anywhere"
-                  onClick={() => setSelectedLead(lead)}
+                  onClick={() => router.push(`/leads/${lead.id}`)}
                 >
                   <td className="py-3 px-4 font-medium text-gray-800">
                     {lead.name || "N/A"}
@@ -238,12 +243,13 @@ export default function LeadsPage() {
                   </td>
                   <td className="py-3 px-4 text-gray-600">
                     <span
-                      className={`font-medium ${lead.status === "Active"
+                      className={`font-medium ${
+                        lead.status === "Active"
                           ? "text-green-600"
                           : lead.status === "Pending"
-                            ? "text-yellow-600"
-                            : "text-gray-600"
-                        }`}
+                          ? "text-yellow-600"
+                          : "text-gray-600"
+                      }`}
                     >
                       {lead.status || "N/A"}
                     </span>

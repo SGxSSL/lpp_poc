@@ -36,13 +36,17 @@ export default function Sidebar() {
 
       {/* Sidebar container */}
       <aside
-        className={`fixed z-40 md:relative bg-white shadow-md h-dvh flex flex-col justify-between transition-all duration-300 
+        className={`fixed z-40 top-0 left-0 bg-white shadow-md h-screen flex flex-col justify-between transition-all duration-300 overflow-y-auto
         ${open ? "w-[280px]" : "-translate-x-full md:translate-x-0 md:w-20"}`}
       >
         <div>
           {/* Logo */}
           <div className="flex items-center justify-center md:justify-start h-16 px-4 border-b border-gray-200">
-            <h2 className={`text-2xl font-bold text-indigo-600 transition-opacity duration-300 ${open ? 'opacity-100' : 'md:opacity-0'}`}>
+            <h2
+              className={`text-2xl font-bold text-indigo-600 transition-opacity duration-300 ${
+                open ? "opacity-100" : "md:opacity-0"
+              }`}
+            >
               AI CRM
             </h2>
           </div>
@@ -54,11 +58,13 @@ export default function Sidebar() {
                 key={name}
                 href={href}
                 className={`flex items-center p-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-300
-                  ${open ? 'px-4' : 'md:justify-center'}`}
+                  ${open ? "px-4" : "md:justify-center"}`}
               >
                 <Icon size={20} />
-                <span className={`ml-3 text-sm font-medium transition-opacity duration-300 
-                  ${open ? 'opacity-100' : 'md:opacity-0 md:w-0 md:hidden'}`}>
+                <span
+                  className={`ml-3 text-sm font-medium transition-opacity duration-300 
+                  ${open ? "opacity-100" : "md:opacity-0 md:w-0 md:hidden"}`}
+                >
                   {name}
                 </span>
               </Link>
@@ -67,12 +73,18 @@ export default function Sidebar() {
         </div>
 
         {/* Footer / Profile section */}
-        <div className={`border-t border-gray-200 p-4 flex items-center transition-all duration-300
-          ${open ? 'space-x-3' : 'md:justify-center'}`}>
+        <div
+          className={`border-t border-gray-200 p-4 flex items-center transition-all duration-300
+          ${open ? "space-x-3" : "md:justify-center"}`}
+        >
           <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold shrink-0">
             SG
           </div>
-          <div className={`transition-opacity duration-300 ${open ? 'opacity-100' : 'md:opacity-0 md:w-0 md:hidden'}`}>
+          <div
+            className={`transition-opacity duration-300 ${
+              open ? "opacity-100" : "md:opacity-0 md:w-0 md:hidden"
+            }`}
+          >
             <p className="text-sm font-medium">Saurabh Goyal</p>
             <p className="text-xs text-gray-500">Loan Officer</p>
           </div>

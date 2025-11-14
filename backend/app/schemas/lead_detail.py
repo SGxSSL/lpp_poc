@@ -11,7 +11,7 @@ class OfficerBase(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UnstructuredAnalysisBase(BaseModel):
     id: int
@@ -55,7 +55,7 @@ class UnstructuredAnalysisBase(BaseModel):
     created_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CallLogBase(BaseModel):
     id: int
@@ -75,7 +75,7 @@ class CallLogBase(BaseModel):
     unstructured_analyses: List[UnstructuredAnalysisBase] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class LeadDetailResponse(BaseModel):
     id: int
@@ -92,4 +92,4 @@ class LeadDetailResponse(BaseModel):
     call_logs: List[CallLogBase] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
