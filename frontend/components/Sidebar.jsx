@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   PhoneCall,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -16,6 +17,7 @@ const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/" },
   { name: "Leads", icon: PhoneCall, href: "/leads" },
   { name: "Officers", icon: Users, href: "/officers" },
+  { name: "About", icon: Info, href: "/about" },
 ];
 
 export default function Sidebar() {

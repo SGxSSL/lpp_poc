@@ -272,6 +272,144 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+      {/* Priority Leads Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-500" />
+              Priority Leads
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              High interest or excellent credit score
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/leads")}
+            className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            View all <ArrowUpRight size={16} />
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Lead Name
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Interest
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Credit Score
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Source
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Contact
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {priority_leads.length > 0 ? (
+                priority_leads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="hover:bg-gray-50 cursor-pointer transition"
+                    onClick={() => router.push(`/leads/${lead.id}`)}
+                  >
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-gray-800">
+                          {lead.name || "N/A"}
+                        </div>
+                        {lead.interest_level >= 8 && (
+                          <Flame className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {lead.lead_type || "N/A"}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          lead.status === "Active"
+                            ? "bg-green-100 text-green-700"
+                            : lead.status === "Pending"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {lead.status || "Unknown"}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${
+                              lead.interest_level >= 8
+                                ? "bg-red-500"
+                                : lead.interest_level >= 5
+                                ? "bg-yellow-500"
+                                : "bg-blue-500"
+                            }`}
+                            style={{
+                              width: `${(lead.interest_level || 0) * 10}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {lead.interest_level || 0}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span
+                        className={`font-semibold ${
+                          lead.credit_score >= 750
+                            ? "text-green-600"
+                            : lead.credit_score >= 700
+                            ? "text-blue-600"
+                            : lead.credit_score >= 650
+                            ? "text-yellow-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {lead.credit_score || "N/A"}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {lead.source || "N/A"}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-500">
+                      {lead.last_contact_date
+                        ? new Date(lead.last_contact_date).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="py-12 text-center text-gray-500">
+                    No priority leads found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -517,32 +655,9 @@ export default function DashboardPage() {
 
       {/* AI Insights Summary */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-yellow-600" />
-          AI Insights Summary
-        </h3>
+
         <div className="flex flex-row gap-6">
-          <div className="flex-1">
-            <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-yellow-600" />
-              Top Keywords
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {analytics.top_keywords.slice(0, 10).map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <span className="font-medium text-gray-700">
-                    {item.keyword}
-                  </span>
-                  <span className="text-xs text-gray-500 bg-indigo-100 px-2 py-1 rounded-full">
-                    {item.frequency}x
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          
 
           <div className="flex-1">
             <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -550,160 +665,28 @@ export default function DashboardPage() {
               Common Pain Points
             </h4>
             <div className="flex flex-wrap gap-2">
-              {analytics.top_pain_points.slice(0, 10).map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <span className="font-medium text-gray-700">
-                    {item.pain_point}
-                  </span>
-                  <span className="text-xs text-gray-500 bg-red-100 px-2 py-1 rounded-full">
-                    {item.frequency}x
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Priority Leads Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-500" />
-              Priority Leads
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              High interest or excellent credit score
-            </p>
-          </div>
-          <button
-            onClick={() => router.push("/leads")}
-            className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-          >
-            View all <ArrowUpRight size={16} />
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lead Name
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Interest
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Credit Score
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Source
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Contact
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {priority_leads.length > 0 ? (
-                priority_leads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    className="hover:bg-gray-50 cursor-pointer transition"
-                    onClick={() => router.push(`/leads/${lead.id}`)}
+              {analytics.top_pain_points &&
+              analytics.top_pain_points.length > 0 ? (
+                analytics.top_pain_points.slice(0, 10).map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200"
                   >
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-gray-800">
-                          {lead.name || "N/A"}
-                        </div>
-                        {lead.interest_level >= 8 && (
-                          <Flame className="w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {lead.lead_type || "N/A"}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          lead.status === "Active"
-                            ? "bg-green-100 text-green-700"
-                            : lead.status === "Pending"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {lead.status || "Unknown"}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              lead.interest_level >= 8
-                                ? "bg-red-500"
-                                : lead.interest_level >= 5
-                                ? "bg-yellow-500"
-                                : "bg-blue-500"
-                            }`}
-                            style={{
-                              width: `${(lead.interest_level || 0) * 10}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">
-                          {lead.interest_level || 0}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`font-semibold ${
-                          lead.credit_score >= 750
-                            ? "text-green-600"
-                            : lead.credit_score >= 700
-                            ? "text-blue-600"
-                            : lead.credit_score >= 650
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {lead.credit_score || "N/A"}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {lead.source || "N/A"}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-500">
-                      {lead.last_contact_date
-                        ? new Date(lead.last_contact_date).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                  </tr>
+                    <span className="font-medium text-gray-700">
+                      {item.pain_point}
+                    </span>
+                    <span className="text-xs text-gray-500 bg-red-100 px-2 py-1 rounded-full">
+                      {item.frequency}x
+                    </span>
+                  </div>
                 ))
               ) : (
-                <tr>
-                  <td colSpan="7" className="py-12 text-center text-gray-500">
-                    No priority leads found
-                  </td>
-                </tr>
+                <p className="text-sm text-gray-500 italic">
+                  No pain points available yet
+                </p>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
