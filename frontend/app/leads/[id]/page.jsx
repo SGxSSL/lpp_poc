@@ -34,8 +34,9 @@ import {
   XCircle,
   Sparkles,
   Flame,
+  RefreshCw,
 } from "lucide-react";
-import { getLeadDetails } from "@/services/leadService";
+import { getLeadDetails, analyzeLead } from "@/services/leadService";
 import {
   BarChart,
   Bar,
@@ -72,6 +73,8 @@ export default function LeadDetailPage() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [expandedCalls, setExpandedCalls] = useState({});
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +89,26 @@ export default function LeadDetailPage() {
     };
     fetchData();
   }, [leadId]);
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setAnalysisStatus(null);
+    try {
+      const status = await analyzeLead(leadId);
+      setAnalysisStatus(status);
+
+      // Refresh lead data after analysis
+      const refreshedData = await getLeadDetails(leadId);
+      setLeadData(refreshedData);
+    } catch (err) {
+      setAnalysisStatus({
+        success: false,
+        actions_taken: [err.message],
+      });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const toggleCallExpand = (callId) => {
     setExpandedCalls((prev) => ({ ...prev, [callId]: !prev[callId] }));
@@ -131,6 +154,15 @@ export default function LeadDetailPage() {
   const allAnalyses =
     leadData.call_logs?.flatMap((log) => log.unstructured_analyses || []) || [];
   const latestAnalysis = allAnalyses[allAnalyses.length - 1] || {};
+
+  // Check for unanalyzed calls
+  const unanalyzedCalls =
+    leadData.call_logs?.filter(
+      (call) =>
+        call.transcription &&
+        (!call.unstructured_analyses || call.unstructured_analyses.length === 0)
+    ) || [];
+  const hasUnanalyzedCalls = unanalyzedCalls.length > 0;
 
   // Calculate average metrics
   const avgConversionProb =
@@ -284,6 +316,22 @@ export default function LeadDetailPage() {
           <p className="text-gray-500">{leadData.lead_type || "Lead"}</p>
         </div>
         <div className="flex gap-2">
+          {hasUnanalyzedCalls && (
+            <button
+              onClick={handleAnalyze}
+              disabled={analyzing}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 transition"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${analyzing ? "animate-spin" : ""}`}
+              />
+              {analyzing
+                ? "Analyzing..."
+                : `Analyze ${unanalyzedCalls.length} Call${
+                    unanalyzedCalls.length > 1 ? "s" : ""
+                  }`}
+            </button>
+          )}
           <span
             className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
               priorityLevel === "high"
@@ -316,76 +364,181 @@ export default function LeadDetailPage() {
         </div>
       </div>
 
-      {/* Executive Summary - KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <KPICard
-          icon={<Gauge className="w-5 h-5" />}
-          label="Conversion Score"
-          value={`${latestConversion.toFixed(0)}%`}
-          trend={conversionTrend}
-          trendLabel={
-            conversionTrend > 0
-              ? `+${conversionTrend.toFixed(0)}%`
-              : conversionTrend < 0
-              ? `${conversionTrend.toFixed(0)}%`
-              : "No change"
-          }
-          color={
-            priorityLevel === "high"
-              ? "green"
-              : priorityLevel === "medium"
-              ? "yellow"
-              : "blue"
-          }
-        />
-        <KPICard
-          icon={<Heart className="w-5 h-5" />}
-          label="Trust Score"
-          value={`${(latestAnalysis.trust_score || 0).toFixed(1)}/10`}
-          subtitle={`Avg: ${avgTrustScore}`}
-          color="pink"
-        />
-        <KPICard
-          icon={<Sparkles className="w-5 h-5" />}
-          label="Engagement"
-          value={leadData.interest_level || "N/A"}
-          subtitle={`${totalCalls} calls`}
-          color="purple"
-        />
-        <KPICard
-          icon={<Activity className="w-5 h-5" />}
-          label="Avg Call Duration"
-          value={`${avgCallDuration}m`}
-          subtitle={`Total: ${totalCalls} calls`}
-          color="indigo"
-        />
-        <KPICard
-          icon={<Clock className="w-5 h-5" />}
-          label="Last Contact"
-          value={
-            daysSinceLastContact !== null ? `${daysSinceLastContact}d` : "N/A"
-          }
-          subtitle={daysSinceLastContact > 7 ? "Follow up needed" : "Recent"}
-          color={daysSinceLastContact > 7 ? "red" : "green"}
-        />
-      </div>
+      {/* Analysis Status Alert */}
+      {analysisStatus && (
+        <div
+          className={`rounded-lg border p-4 ${
+            analysisStatus.success
+              ? "bg-green-50 border-green-200"
+              : "bg-red-50 border-red-200"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            {analysisStatus.success ? (
+              <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+            ) : (
+              <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1">
+              <h4
+                className={`font-semibold mb-1 ${
+                  analysisStatus.success ? "text-green-900" : "text-red-900"
+                }`}
+              >
+                {analysisStatus.success
+                  ? "Analysis Complete"
+                  : "Analysis Failed"}
+              </h4>
+              <ul className="text-sm space-y-1">
+                {analysisStatus.actions_taken?.map((action, idx) => (
+                  <li
+                    key={idx}
+                    className={
+                      analysisStatus.success ? "text-green-700" : "text-red-700"
+                    }
+                  >
+                    • {action}
+                  </li>
+                ))}
+                {analysisStatus.analysis_errors?.map((error, idx) => (
+                  <li key={idx} className="text-red-700">
+                    • Error: {error}
+                  </li>
+                ))}
+              </ul>
+              {analysisStatus.newly_analyzed > 0 && (
+                <p className="text-sm text-green-700 mt-2">
+                  ✓ Analyzed {analysisStatus.newly_analyzed} call
+                  {analysisStatus.newly_analyzed > 1 ? "s" : ""}
+                </p>
+              )}
+              {analysisStatus.newly_scored && analysisStatus.score_value && (
+                <p className="text-sm text-green-700 mt-1">
+                  ✓ Lead score: {analysisStatus.score_value}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setAnalysisStatus(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Show message if no calls, otherwise show tabs */}
-      {!leadData.call_logs || leadData.call_logs.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center mt-6">
-          <Phone className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
-            No Call History Yet
-          </h3>
-          <p className="text-gray-500 mb-6">
-            There are no call logs available for this lead. Once calls are
-            recorded and analyzed, detailed insights will appear here.
-          </p>
-          <div className="bg-indigo-50 rounded-lg p-6 max-w-md mx-auto">
-            <h4 className="font-semibold text-indigo-900 mb-2">
+      {/* Unanalyzed Calls Warning - Show only call details */}
+      {hasUnanalyzedCalls && allAnalyses.length === 0 ? (
+        <div className="space-y-6">
+          {/* Call Details with Analyze Prompt */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  Call History
+                </h3>
+                <p className="text-gray-500 text-sm mt-1">
+                  {unanalyzedCalls.length} call
+                  {unanalyzedCalls.length > 1 ? "s" : ""} ready for AI analysis
+                </p>
+              </div>
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 transition shadow-md hover:shadow-lg"
+              >
+                <Brain
+                  className={`w-5 h-5 ${analyzing ? "animate-spin" : ""}`}
+                />
+                {analyzing ? "Analyzing..." : "Analyze All Calls"}
+              </button>
+            </div>
+
+            {/* Call Cards */}
+            <div className="space-y-4">
+              {leadData.call_logs.map((call, idx) => (
+                <div
+                  key={call.id}
+                  className="border border-gray-200 rounded-lg p-5 hover:border-indigo-300 transition"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-indigo-100 rounded-lg p-3">
+                        <Phone className="w-6 h-6 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                          Call #{idx + 1}
+                          {!call.unstructured_analyses ||
+                          call.unstructured_analyses.length === 0 ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                              Not Analyzed
+                            </span>
+                          ) : null}
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {new Date(call.call_date).toLocaleDateString()} at{" "}
+                          {new Date(call.call_date).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Duration</p>
+                      <p className="text-xl font-bold text-gray-800">
+                        {call.duration_minutes}m
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Summary if available */}
+                  {call.summary && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        Summary
+                      </p>
+                      <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                        {call.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Transcription */}
+                  {call.transcription && (
+                    <div className="border-t border-gray-100 pt-4">
+                      <button
+                        onClick={() => toggleCallExpand(call.id)}
+                        className="text-indigo-600 text-sm flex items-center gap-2 hover:text-indigo-800 font-medium mb-3"
+                      >
+                        {expandedCalls[call.id] ? (
+                          <>
+                            <ChevronUp size={16} /> Hide Transcription
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={16} /> Show Transcription
+                          </>
+                        )}
+                      </button>
+                      {expandedCalls[call.id] && (
+                        <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 leading-relaxed max-h-96 overflow-y-auto">
+                          {call.transcription}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lead Basic Info */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-indigo-600" />
               Lead Information
-            </h4>
-            <div className="space-y-3 text-left">
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoRow
                 icon={<Mail className="w-4 h-4" />}
                 label="Email"
@@ -406,422 +559,552 @@ export default function LeadDetailPage() {
                 label="Credit Score"
                 value={leadData.credit_score || "N/A"}
               />
+              <InfoRow
+                icon={<Target className="w-4 h-4" />}
+                label="Lead Type"
+                value={leadData.lead_type || "N/A"}
+              />
+              <InfoRow
+                icon={<Activity className="w-4 h-4" />}
+                label="Status"
+                value={leadData.status || "N/A"}
+              />
             </div>
           </div>
         </div>
       ) : (
         <>
-          {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <div className="flex gap-6">
-              <TabButton
-                active={activeTab === "overview"}
-                onClick={() => setActiveTab("overview")}
-                icon={<BarChart3 className="w-4 h-4" />}
-                label="Intelligence Dashboard"
-              />
-              <TabButton
-                active={activeTab === "conversion"}
-                onClick={() => setActiveTab("conversion")}
-                icon={<TrendingUp className="w-4 h-4" />}
-                label="Conversion Analysis"
-              />
-              <TabButton
-                active={activeTab === "emotional"}
-                onClick={() => setActiveTab("emotional")}
-                icon={<Heart className="w-4 h-4" />}
-                label="Emotional Intelligence"
-              />
-              <TabButton
-                active={activeTab === "calls"}
-                onClick={() => setActiveTab("calls")}
-                icon={<MessageSquare className="w-4 h-4" />}
-                label="Call Details"
-              />
-              <TabButton
-                active={activeTab === "insights"}
-                onClick={() => setActiveTab("insights")}
-                icon={<Brain className="w-4 h-4" />}
-                label="AI Insights"
-              />
+          {/* Executive Summary - KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <KPICard
+              icon={<Gauge className="w-5 h-5" />}
+              label="Conversion Score"
+              value={`${latestConversion.toFixed(0)}%`}
+              trend={conversionTrend}
+              trendLabel={
+                conversionTrend > 0
+                  ? `+${conversionTrend.toFixed(0)}%`
+                  : conversionTrend < 0
+                  ? `${conversionTrend.toFixed(0)}%`
+                  : "No change"
+              }
+              color={
+                priorityLevel === "high"
+                  ? "green"
+                  : priorityLevel === "medium"
+                  ? "yellow"
+                  : "blue"
+              }
+            />
+            <KPICard
+              icon={<Heart className="w-5 h-5" />}
+              label="Trust Score"
+              value={`${(latestAnalysis.trust_score || 0).toFixed(1)}/10`}
+              subtitle={`Avg: ${avgTrustScore}`}
+              color="pink"
+            />
+            <KPICard
+              icon={<Sparkles className="w-5 h-5" />}
+              label="Engagement"
+              value={leadData.interest_level || "N/A"}
+              subtitle={`${totalCalls} calls`}
+              color="purple"
+            />
+            <KPICard
+              icon={<Activity className="w-5 h-5" />}
+              label="Avg Call Duration"
+              value={`${avgCallDuration}m`}
+              subtitle={`Total: ${totalCalls} calls`}
+              color="indigo"
+            />
+            <KPICard
+              icon={<Clock className="w-5 h-5" />}
+              label="Last Contact"
+              value={
+                daysSinceLastContact !== null
+                  ? `${daysSinceLastContact}d`
+                  : "N/A"
+              }
+              subtitle={
+                daysSinceLastContact > 7 ? "Follow up needed" : "Recent"
+              }
+              color={daysSinceLastContact > 7 ? "red" : "green"}
+            />
+          </div>
+
+          {!leadData.call_logs || leadData.call_logs.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center mt-6">
+              <Phone className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                No Call History Yet
+              </h3>
+              <p className="text-gray-500 mb-6">
+                There are no call logs available for this lead. Once calls are
+                recorded and analyzed, detailed insights will appear here.
+              </p>
+              <div className="bg-indigo-50 rounded-lg p-6 max-w-md mx-auto">
+                <h4 className="font-semibold text-indigo-900 mb-2">
+                  Lead Information
+                </h4>
+                <div className="space-y-3 text-left">
+                  <InfoRow
+                    icon={<Mail className="w-4 h-4" />}
+                    label="Email"
+                    value={leadData.email || "N/A"}
+                  />
+                  <InfoRow
+                    icon={<Phone className="w-4 h-4" />}
+                    label="Phone"
+                    value={leadData.phone || "N/A"}
+                  />
+                  <InfoRow
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="Source"
+                    value={leadData.source || "N/A"}
+                  />
+                  <InfoRow
+                    icon={<TrendingUp className="w-4 h-4" />}
+                    label="Credit Score"
+                    value={leadData.credit_score || "N/A"}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="mt-6">
-            {activeTab === "overview" && (
-              <div className="space-y-6">
-                {/* Conversion Journey Tracker */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-indigo-600" />
-                    Conversion Journey Progress
-                  </h3>
-                  <ConversionJourneyTracker
-                    currentStage={latestAnalysis.decision_stage || "awareness"}
-                    intentStrength={latestAnalysis.intent_strength || "weak"}
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className="border-b border-gray-200">
+                <div className="flex gap-6">
+                  <TabButton
+                    active={activeTab === "overview"}
+                    onClick={() => setActiveTab("overview")}
+                    icon={<BarChart3 className="w-4 h-4" />}
+                    label="Intelligence Dashboard"
                   />
-                </div>
-
-                {/* Multi-Metric Performance */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Performance Across Calls
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <ComposedChart data={qualityTrend}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="call" />
-                        <YAxis
-                          label={{
-                            value: "Score",
-                            angle: -90,
-                            position: "insideLeft",
-                          }}
-                        />
-                        <Tooltip />
-                        <Legend />
-                        <Area
-                          type="monotone"
-                          dataKey="conversion"
-                          fill="#6366f1"
-                          fillOpacity={0.2}
-                          stroke="#6366f1"
-                          strokeWidth={2}
-                          name="Conversion %"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="trust"
-                          stroke="#ec4899"
-                          strokeWidth={2}
-                          name="Trust (x10)"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="empathy"
-                          stroke="#8b5cf6"
-                          strokeWidth={2}
-                          name="Empathy (x10)"
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Conversation Quality Radar
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <RadarChart data={radarData}>
-                        <PolarGrid stroke="#e5e7eb" />
-                        <PolarAngleAxis
-                          dataKey="metric"
-                          tick={{ fill: "#6b7280", fontSize: 12 }}
-                        />
-                        <PolarRadiusAxis
-                          angle={90}
-                          domain={[0, 10]}
-                          tick={{ fill: "#9ca3af", fontSize: 10 }}
-                        />
-                        <Radar
-                          name="Current"
-                          dataKey="value"
-                          stroke="#6366f1"
-                          fill="#6366f1"
-                          fillOpacity={0.5}
-                          strokeWidth={2}
-                        />
-                        <Tooltip />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Contact Info & Quick Stats */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                      <User className="w-5 h-5 text-indigo-600" />
-                      Lead Information
-                    </h3>
-                    <div className="space-y-4">
-                      <InfoRow
-                        icon={<Mail className="w-4 h-4" />}
-                        label="Email"
-                        value={leadData.email || "N/A"}
-                      />
-                      <InfoRow
-                        icon={<Phone className="w-4 h-4" />}
-                        label="Phone"
-                        value={leadData.phone || "N/A"}
-                      />
-                      <InfoRow
-                        icon={<Calendar className="w-4 h-4" />}
-                        label="Source"
-                        value={leadData.source || "N/A"}
-                      />
-                      <InfoRow
-                        icon={<TrendingUp className="w-4 h-4" />}
-                        label="Credit Score"
-                        value={leadData.credit_score || "N/A"}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                      <Lightbulb className="w-5 h-5 text-yellow-600" />
-                      Key Insights & Recommendations
-                    </h3>
-                    <KeyInsightsPanel
-                      latestAnalysis={latestAnalysis}
-                      conversionTrend={conversionTrend}
-                      daysSinceLastContact={daysSinceLastContact}
-                    />
-                  </div>
+                  <TabButton
+                    active={activeTab === "conversion"}
+                    onClick={() => setActiveTab("conversion")}
+                    icon={<TrendingUp className="w-4 h-4" />}
+                    label="Conversion Analysis"
+                  />
+                  <TabButton
+                    active={activeTab === "emotional"}
+                    onClick={() => setActiveTab("emotional")}
+                    icon={<Heart className="w-4 h-4" />}
+                    label="Emotional Intelligence"
+                  />
+                  <TabButton
+                    active={activeTab === "calls"}
+                    onClick={() => setActiveTab("calls")}
+                    icon={<MessageSquare className="w-4 h-4" />}
+                    label="Call Details"
+                  />
+                  <TabButton
+                    active={activeTab === "insights"}
+                    onClick={() => setActiveTab("insights")}
+                    icon={<Brain className="w-4 h-4" />}
+                    label="AI Insights"
+                  />
                 </div>
               </div>
-            )}
 
-            {activeTab === "conversion" && (
-              <div className="space-y-6">
-                {/* Conversion Metrics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <MetricCard
-                    icon={<Target className="w-6 h-6 text-indigo-600" />}
-                    label="Current Conversion"
-                    value={`${latestConversion.toFixed(0)}%`}
-                    subtitle={`Average: ${avgConversionProb}%`}
-                    trend={conversionTrend}
-                  />
-                  <MetricCard
-                    icon={<Zap className="w-6 h-6 text-yellow-600" />}
-                    label="Intent Strength"
-                    value={latestAnalysis.intent_strength || "Unknown"}
-                    subtitle={latestAnalysis.intent_type || "N/A"}
-                  />
-                  <MetricCard
-                    icon={<Activity className="w-6 h-6 text-purple-600" />}
-                    label="Decision Stage"
-                    value={latestAnalysis.decision_stage || "Unknown"}
-                    subtitle={latestAnalysis.outcome_classification || "N/A"}
-                  />
-                </div>
-
-                {/* Pain Points & Objections */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                      Pain Points
-                    </h3>
-                    {latestAnalysis.pain_points ? (
-                      <p className="text-sm text-gray-700 bg-red-50 rounded-lg p-4">
-                        {latestAnalysis.pain_points}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-gray-400 italic">
-                        No pain points identified
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                      <XCircle className="w-5 h-5 text-orange-600" />
-                      Objections
-                    </h3>
-                    {latestAnalysis.objections ? (
-                      <p className="text-sm text-gray-700 bg-orange-50 rounded-lg p-4">
-                        {latestAnalysis.objections}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-gray-400 italic">
-                        No objections raised
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Next Actions */}
-                {latestAnalysis.next_actions && (
-                  <div className="bg-linear-to-br from-indigo-50 to-purple-50 rounded-xl shadow-sm border border-indigo-100 p-6">
-                    <h3 className="text-lg font-semibold text-indigo-900 mb-4 flex items-center gap-2">
-                      <Lightbulb className="w-5 h-5 text-indigo-600" />
-                      Recommended Next Actions
-                    </h3>
-                    <p className="text-sm text-indigo-800 mb-3">
-                      {latestAnalysis.next_actions}
-                    </p>
-                    <div className="flex items-center gap-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          latestAnalysis.followup_priority === "High"
-                            ? "bg-red-200 text-red-800"
-                            : latestAnalysis.followup_priority === "Medium"
-                            ? "bg-yellow-200 text-yellow-800"
-                            : "bg-green-200 text-green-800"
-                        }`}
-                      >
-                        Priority: {latestAnalysis.followup_priority || "Medium"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "emotional" && (
-              <div className="space-y-6">
-                {/* Emotional Metrics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <EmotionalMetricCard
-                    label="Sentiment"
-                    value={latestAnalysis.sentiment || "neutral"}
-                    icon={
-                      latestAnalysis.sentiment === "positive" ? (
-                        <ThumbsUp className="w-5 h-5" />
-                      ) : latestAnalysis.sentiment === "negative" ? (
-                        <ThumbsDown className="w-5 h-5" />
-                      ) : (
-                        <Minus className="w-5 h-5" />
-                      )
-                    }
-                    color={
-                      latestAnalysis.sentiment === "positive"
-                        ? "green"
-                        : latestAnalysis.sentiment === "negative"
-                        ? "red"
-                        : "gray"
-                    }
-                  />
-                  <EmotionalMetricCard
-                    label="Dominant Emotion"
-                    value={latestAnalysis.dominant_emotion || "Unknown"}
-                    icon={<Heart className="w-5 h-5" />}
-                    color="pink"
-                  />
-                  <EmotionalMetricCard
-                    label="Tone"
-                    value={latestAnalysis.tone || "Unknown"}
-                    icon={<MessageSquare className="w-5 h-5" />}
-                    color="purple"
-                  />
-                  <EmotionalMetricCard
-                    label="Empathy Score"
-                    value={`${(latestAnalysis.empathy_score || 0).toFixed(
-                      1
-                    )}/10`}
-                    icon={<Heart className="w-5 h-5" />}
-                    color="indigo"
-                  />
-                </div>
-
-                {/* Emotion Profile & Sentiment Distribution */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {emotionData.length > 0 && (
+              {/* Tab Content */}
+              <div className="mt-6">
+                {activeTab === "overview" && (
+                  <div className="space-y-6">
+                    {/* Conversion Journey Tracker */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                        Emotion Profile Distribution
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <Target className="w-5 h-5 text-indigo-600" />
+                        Conversion Journey Progress
                       </h3>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={emotionData} layout="vertical">
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="#f0f0f0"
-                          />
-                          <XAxis type="number" domain={[0, 100]} />
-                          <YAxis type="category" dataKey="name" width={100} />
-                          <Tooltip />
-                          <Bar
-                            dataKey="value"
-                            fill="#ec4899"
-                            name="Intensity %"
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <ConversionJourneyTracker
+                        currentStage={
+                          latestAnalysis.decision_stage || "awareness"
+                        }
+                        intentStrength={
+                          latestAnalysis.intent_strength || "weak"
+                        }
+                      />
                     </div>
-                  )}
 
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Sentiment Across Calls
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={sentimentData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          label={(entry) => `${entry.name}: ${entry.value}`}
-                        >
-                          {sentimentData.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={
-                                entry.name === "positive"
-                                  ? "#10b981"
-                                  : entry.name === "negative"
-                                  ? "#ef4444"
-                                  : "#6b7280"
-                              }
+                    {/* Multi-Metric Performance */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                          Performance Across Calls
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <ComposedChart data={qualityTrend}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#f0f0f0"
                             />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            )}
+                            <XAxis dataKey="call" />
+                            <YAxis
+                              label={{
+                                value: "Score",
+                                angle: -90,
+                                position: "insideLeft",
+                              }}
+                            />
+                            <Tooltip />
+                            <Legend />
+                            <Area
+                              type="monotone"
+                              dataKey="conversion"
+                              fill="#6366f1"
+                              fillOpacity={0.2}
+                              stroke="#6366f1"
+                              strokeWidth={2}
+                              name="Conversion %"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="trust"
+                              stroke="#ec4899"
+                              strokeWidth={2}
+                              name="Trust (x10)"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="empathy"
+                              stroke="#8b5cf6"
+                              strokeWidth={2}
+                              name="Empathy (x10)"
+                            />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
 
-            {activeTab === "calls" && (
-              <div className="space-y-4">
-                {leadData.call_logs && leadData.call_logs.length > 0 ? (
-                  leadData.call_logs.map((call, idx) => (
-                    <EnhancedCallCard
-                      key={call.id}
-                      call={call}
-                      callNumber={idx + 1}
-                      expanded={expandedCalls[call.id]}
-                      onToggle={() => toggleCallExpand(call.id)}
-                    />
-                  ))
-                ) : (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                    <Phone className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">
-                      No call logs available
-                    </p>
-                    <p className="text-gray-400 text-sm mt-2">
-                      Call history will appear here once calls are recorded
-                    </p>
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                          Conversation Quality Radar
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <RadarChart data={radarData}>
+                            <PolarGrid stroke="#e5e7eb" />
+                            <PolarAngleAxis
+                              dataKey="metric"
+                              tick={{ fill: "#6b7280", fontSize: 12 }}
+                            />
+                            <PolarRadiusAxis
+                              angle={90}
+                              domain={[0, 10]}
+                              tick={{ fill: "#9ca3af", fontSize: 10 }}
+                            />
+                            <Radar
+                              name="Current"
+                              dataKey="value"
+                              stroke="#6366f1"
+                              fill="#6366f1"
+                              fillOpacity={0.5}
+                              strokeWidth={2}
+                            />
+                            <Tooltip />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Contact Info & Quick Stats */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <User className="w-5 h-5 text-indigo-600" />
+                          Lead Information
+                        </h3>
+                        <div className="space-y-4">
+                          <InfoRow
+                            icon={<Mail className="w-4 h-4" />}
+                            label="Email"
+                            value={leadData.email || "N/A"}
+                          />
+                          <InfoRow
+                            icon={<Phone className="w-4 h-4" />}
+                            label="Phone"
+                            value={leadData.phone || "N/A"}
+                          />
+                          <InfoRow
+                            icon={<Calendar className="w-4 h-4" />}
+                            label="Source"
+                            value={leadData.source || "N/A"}
+                          />
+                          <InfoRow
+                            icon={<TrendingUp className="w-4 h-4" />}
+                            label="Credit Score"
+                            value={leadData.credit_score || "N/A"}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <Lightbulb className="w-5 h-5 text-yellow-600" />
+                          Key Insights & Recommendations
+                        </h3>
+                        <KeyInsightsPanel
+                          latestAnalysis={latestAnalysis}
+                          conversionTrend={conversionTrend}
+                          daysSinceLastContact={daysSinceLastContact}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "conversion" && (
+                  <div className="space-y-6">
+                    {/* Conversion Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <MetricCard
+                        icon={<Target className="w-6 h-6 text-indigo-600" />}
+                        label="Current Conversion"
+                        value={`${latestConversion.toFixed(0)}%`}
+                        subtitle={`Average: ${avgConversionProb}%`}
+                        trend={conversionTrend}
+                      />
+                      <MetricCard
+                        icon={<Zap className="w-6 h-6 text-yellow-600" />}
+                        label="Intent Strength"
+                        value={latestAnalysis.intent_strength || "Unknown"}
+                        subtitle={latestAnalysis.intent_type || "N/A"}
+                      />
+                      <MetricCard
+                        icon={<Activity className="w-6 h-6 text-purple-600" />}
+                        label="Decision Stage"
+                        value={latestAnalysis.decision_stage || "Unknown"}
+                        subtitle={
+                          latestAnalysis.outcome_classification || "N/A"
+                        }
+                      />
+                    </div>
+
+                    {/* Pain Points & Objections */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5 text-red-600" />
+                          Pain Points
+                        </h3>
+                        {latestAnalysis.pain_points ? (
+                          <p className="text-sm text-gray-700 bg-red-50 rounded-lg p-4">
+                            {latestAnalysis.pain_points}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-400 italic">
+                            No pain points identified
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <XCircle className="w-5 h-5 text-orange-600" />
+                          Objections
+                        </h3>
+                        {latestAnalysis.objections ? (
+                          <p className="text-sm text-gray-700 bg-orange-50 rounded-lg p-4">
+                            {latestAnalysis.objections}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-400 italic">
+                            No objections raised
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Next Actions */}
+                    {latestAnalysis.next_actions && (
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-sm border border-indigo-100 p-6">
+                        <h3 className="text-lg font-semibold text-indigo-900 mb-4 flex items-center gap-2">
+                          <Lightbulb className="w-5 h-5 text-indigo-600" />
+                          Recommended Next Actions
+                        </h3>
+                        <p className="text-sm text-indigo-800 mb-3">
+                          {latestAnalysis.next_actions}
+                        </p>
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              latestAnalysis.followup_priority === "High"
+                                ? "bg-red-200 text-red-800"
+                                : latestAnalysis.followup_priority === "Medium"
+                                ? "bg-yellow-200 text-yellow-800"
+                                : "bg-green-200 text-green-800"
+                            }`}
+                          >
+                            Priority:{" "}
+                            {latestAnalysis.followup_priority || "Medium"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "emotional" && (
+                  <div className="space-y-6">
+                    {/* Emotional Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <EmotionalMetricCard
+                        label="Sentiment"
+                        value={latestAnalysis.sentiment || "neutral"}
+                        icon={
+                          latestAnalysis.sentiment === "positive" ? (
+                            <ThumbsUp className="w-5 h-5" />
+                          ) : latestAnalysis.sentiment === "negative" ? (
+                            <ThumbsDown className="w-5 h-5" />
+                          ) : (
+                            <Minus className="w-5 h-5" />
+                          )
+                        }
+                        color={
+                          latestAnalysis.sentiment === "positive"
+                            ? "green"
+                            : latestAnalysis.sentiment === "negative"
+                            ? "red"
+                            : "gray"
+                        }
+                      />
+                      <EmotionalMetricCard
+                        label="Dominant Emotion"
+                        value={latestAnalysis.dominant_emotion || "Unknown"}
+                        icon={<Heart className="w-5 h-5" />}
+                        color="pink"
+                      />
+                      <EmotionalMetricCard
+                        label="Tone"
+                        value={latestAnalysis.tone || "Unknown"}
+                        icon={<MessageSquare className="w-5 h-5" />}
+                        color="purple"
+                      />
+                      <EmotionalMetricCard
+                        label="Empathy Score"
+                        value={`${(latestAnalysis.empathy_score || 0).toFixed(
+                          1
+                        )}/10`}
+                        icon={<Heart className="w-5 h-5" />}
+                        color="indigo"
+                      />
+                    </div>
+
+                    {/* Emotion Profile & Sentiment Distribution */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {emotionData.length > 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                            Emotion Profile Distribution
+                          </h3>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={emotionData} layout="vertical">
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#f0f0f0"
+                              />
+                              <XAxis type="number" domain={[0, 100]} />
+                              <YAxis
+                                type="category"
+                                dataKey="name"
+                                width={100}
+                              />
+                              <Tooltip />
+                              <Bar
+                                dataKey="value"
+                                fill="#ec4899"
+                                name="Intensity %"
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                          Sentiment Across Calls
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={sentimentData}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={100}
+                              label={(entry) => `${entry.name}: ${entry.value}`}
+                            >
+                              {sentimentData.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={
+                                    entry.name === "positive"
+                                      ? "#10b981"
+                                      : entry.name === "negative"
+                                      ? "#ef4444"
+                                      : "#6b7280"
+                                  }
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "calls" && (
+                  <div className="space-y-4">
+                    {leadData.call_logs && leadData.call_logs.length > 0 ? (
+                      leadData.call_logs.map((call, idx) => (
+                        <EnhancedCallCard
+                          key={call.id}
+                          call={call}
+                          callNumber={idx + 1}
+                          expanded={expandedCalls[call.id]}
+                          onToggle={() => toggleCallExpand(call.id)}
+                        />
+                      ))
+                    ) : (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                        <Phone className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 text-lg">
+                          No call logs available
+                        </p>
+                        <p className="text-gray-400 text-sm mt-2">
+                          Call history will appear here once calls are recorded
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "insights" && (
+                  <div className="space-y-6">
+                    {allAnalyses.length > 0 ? (
+                      allAnalyses.map((analysis, idx) => (
+                        <AIAnalysisCard
+                          key={idx}
+                          analysis={analysis}
+                          index={idx}
+                        />
+                      ))
+                    ) : (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+                        <Brain className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">
+                          No AI analysis available
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-
-            {activeTab === "insights" && (
-              <div className="space-y-6">
-                {allAnalyses.length > 0 ? (
-                  allAnalyses.map((analysis, idx) => (
-                    <AIAnalysisCard key={idx} analysis={analysis} index={idx} />
-                  ))
-                ) : (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-                    <Brain className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No AI analysis available</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </>
       )}
     </div>

@@ -31,3 +31,13 @@ export async function getDashboardData() {
   }
   return response.json();
 }
+
+export async function analyzeLead(id) {
+  const response = await fetch(`${API_BASE_URL}/leads/${id}/analyze`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to analyze lead");
+  }
+  return response.json();
+}
