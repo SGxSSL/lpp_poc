@@ -35,8 +35,13 @@ import {
   Sparkles,
   Flame,
   RefreshCw,
+  History,
 } from "lucide-react";
-import { getLeadDetails, analyzeLead } from "@/services/leadService";
+import {
+  getLeadDetails,
+  analyzeLead,
+  getLeadScoreHistory,
+} from "@/services/leadService";
 import {
   BarChart,
   Bar,
@@ -75,6 +80,8 @@ export default function LeadDetailPage() {
   const [expandedCalls, setExpandedCalls] = useState({});
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState(null);
+  const [scoreHistory, setScoreHistory] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,6 +97,19 @@ export default function LeadDetailPage() {
     fetchData();
   }, [leadId]);
 
+  const fetchScoreHistory = async () => {
+    if (scoreHistory) return; // Already loaded
+    setLoadingHistory(true);
+    try {
+      const history = await getLeadScoreHistory(leadId);
+      setScoreHistory(history);
+    } catch (err) {
+      console.error("Failed to fetch score history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const handleAnalyze = async () => {
     setAnalyzing(true);
     setAnalysisStatus(null);
@@ -97,9 +117,13 @@ export default function LeadDetailPage() {
       const status = await analyzeLead(leadId);
       setAnalysisStatus(status);
 
-      // Refresh lead data after analysis
+      // Refresh lead data and score history after analysis
       const refreshedData = await getLeadDetails(leadId);
       setLeadData(refreshedData);
+
+      // Refresh score history
+      const history = await getLeadScoreHistory(leadId);
+      setScoreHistory(history);
     } catch (err) {
       setAnalysisStatus({
         success: false,
@@ -705,6 +729,15 @@ export default function LeadDetailPage() {
                     icon={<Brain className="w-4 h-4" />}
                     label="AI Insights"
                   />
+                  <TabButton
+                    active={activeTab === "history"}
+                    onClick={() => {
+                      setActiveTab("history");
+                      fetchScoreHistory();
+                    }}
+                    icon={<History className="w-4 h-4" />}
+                    label="Score History"
+                  />
                 </div>
               </div>
 
@@ -1097,6 +1130,195 @@ export default function LeadDetailPage() {
                         <Brain className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500">
                           No AI analysis available
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "history" && (
+                  <div className="space-y-6">
+                    {loadingHistory ? (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                        <RefreshCw className="w-12 h-12 text-indigo-500 mx-auto mb-4 animate-spin" />
+                        <p className="text-gray-600">
+                          Loading score history...
+                        </p>
+                      </div>
+                    ) : scoreHistory && scoreHistory.total_versions > 0 ? (
+                      <>
+                        {/* Summary Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                              <History className="w-5 h-5 text-indigo-600" />
+                              Score Version History
+                            </h3>
+                            <div className="text-sm text-gray-500">
+                              Total Versions:{" "}
+                              <span className="font-bold text-gray-800">
+                                {scoreHistory.total_versions}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Current Score Highlight */}
+                          {scoreHistory.current_score && (
+                            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm text-indigo-600 font-medium mb-1">
+                                    Current Score (v
+                                    {scoreHistory.current_score.version})
+                                  </p>
+                                  <p className="text-3xl font-bold text-indigo-900">
+                                    {scoreHistory.current_score.score}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-indigo-600 mb-1">
+                                    {
+                                      scoreHistory.current_score
+                                        .total_calls_analyzed
+                                    }{" "}
+                                    calls analyzed
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(
+                                      scoreHistory.current_score.created_at
+                                    ).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Score History Timeline */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                          <h4 className="text-md font-semibold text-gray-800 mb-4">
+                            Version Timeline
+                          </h4>
+                          <div className="space-y-4">
+                            {scoreHistory.score_history.map((score, idx) => {
+                              // Skip the first item (current score) since it's shown above
+                              if (idx === 0) return null;
+
+                              return (
+                                <div
+                                  key={score.id}
+                                  className={`border-l-4 pl-4 py-3 ${
+                                    idx === 0
+                                      ? "border-indigo-600 bg-indigo-50"
+                                      : "border-gray-300 bg-gray-50"
+                                  } rounded-r-lg`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-3 mb-2">
+                                        <span
+                                          className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                            idx === 0
+                                              ? "bg-indigo-600 text-white"
+                                              : "bg-gray-600 text-white"
+                                          }`}
+                                        >
+                                          v{score.version}
+                                        </span>
+                                        <span className="text-2xl font-bold text-gray-800">
+                                          {score.score}
+                                        </span>
+                                        {idx === 0 && (
+                                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                            Current
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <p className="text-sm text-gray-600 mb-2">
+                                        {score.reason}
+                                      </p>
+
+                                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                                        <span className="flex items-center gap-1">
+                                          <Phone className="w-3 h-3" />
+                                          {score.total_calls_analyzed} calls
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <Calendar className="w-3 h-3" />
+                                          {new Date(
+                                            score.created_at
+                                          ).toLocaleString()}
+                                        </span>
+                                      </div>
+
+                                      {score.call_ids_snapshot &&
+                                        score.call_ids_snapshot.length > 0 && (
+                                          <div className="mt-2">
+                                            <p className="text-xs text-gray-500">
+                                              Call IDs:{" "}
+                                              {score.call_ids_snapshot.join(
+                                                ", "
+                                              )}
+                                            </p>
+                                          </div>
+                                        )}
+                                    </div>
+
+                                    {idx > 0 &&
+                                      scoreHistory.score_history[idx - 1] && (
+                                        <div className="ml-4 text-right">
+                                          <div
+                                            className={`flex items-center gap-1 text-sm font-medium ${
+                                              score.score >
+                                              scoreHistory.score_history[
+                                                idx - 1
+                                              ].score
+                                                ? "text-green-600"
+                                                : score.score <
+                                                  scoreHistory.score_history[
+                                                    idx - 1
+                                                  ].score
+                                                ? "text-red-600"
+                                                : "text-gray-600"
+                                            }`}
+                                          >
+                                            {score.score >
+                                            scoreHistory.score_history[idx - 1]
+                                              .score ? (
+                                              <ArrowUpRight className="w-4 h-4" />
+                                            ) : score.score <
+                                              scoreHistory.score_history[
+                                                idx - 1
+                                              ].score ? (
+                                              <ArrowDownRight className="w-4 h-4" />
+                                            ) : (
+                                              <Minus className="w-4 h-4" />
+                                            )}
+                                            {(
+                                              score.score -
+                                              scoreHistory.score_history[
+                                                idx - 1
+                                              ].score
+                                            ).toFixed(1)}
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                        <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                          No Score History Yet
+                        </h3>
+                        <p className="text-gray-500">
+                          Analyze calls to generate the first lead score
                         </p>
                       </div>
                     )}

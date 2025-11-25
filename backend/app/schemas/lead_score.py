@@ -1,7 +1,7 @@
 # app/schemas/lead_score.py
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class LeadScoreBase(BaseModel):
@@ -12,11 +12,17 @@ class LeadScoreBase(BaseModel):
 
 
 class LeadScoreCreate(LeadScoreBase):
-    pass
+    version: Optional[int] = 1
+    total_calls_analyzed: Optional[int] = 0
+    call_ids_snapshot: Optional[List[int]] = None
 
 
 class LeadScoreOut(LeadScoreBase):
     id: int
+    version: int
+    total_calls_analyzed: int
+    call_ids_snapshot: Optional[List[int]] = None
+    created_at: datetime
     last_updated: datetime
 
     class Config:

@@ -41,3 +41,11 @@ export async function analyzeLead(id) {
   }
   return response.json();
 }
+
+export async function getLeadScoreHistory(id) {
+  const response = await fetch(`${API_BASE_URL}/leads/${id}/score-history`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch score history");
+  }
+  return response.json();
+}
