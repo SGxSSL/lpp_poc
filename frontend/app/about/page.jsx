@@ -29,6 +29,27 @@ export default function AboutPage() {
       color: "bg-purple-100 text-purple-600",
     },
     {
+      icon: MessageSquare,
+      title: "Clarity Analysis",
+      description:
+        "Measures communication effectiveness, identifies objections, and tracks how well messages are conveyed during calls.",
+      color: "bg-indigo-100 text-indigo-600",
+    },
+    {
+      icon: Heart,
+      title: "Emotional Intelligence",
+      description:
+        "Detects and tracks emotional states throughout conversations including joy, frustration, interest, and hesitation.",
+      color: "bg-pink-100 text-pink-600",
+    },
+    {
+      icon: Shield,
+      title: "Trust Scoring",
+      description:
+        "Analyzes conversation dynamics, politeness levels, and cooperation to measure customer trust and relationship quality.",
+      color: "bg-teal-100 text-teal-600",
+    },
+    {
       icon: Target,
       title: "Lead Scoring",
       description:
@@ -41,27 +62,6 @@ export default function AboutPage() {
       description:
         "Machine learning models predict conversion probability based on call quality, customer engagement, and historical patterns.",
       color: "bg-green-100 text-green-600",
-    },
-    {
-      icon: Shield,
-      title: "Trust Scoring",
-      description:
-        "Analyzes conversation dynamics, politeness levels, and cooperation to measure customer trust and relationship quality.",
-      color: "bg-teal-100 text-teal-600",
-    },
-    {
-      icon: Heart,
-      title: "Emotional Intelligence",
-      description:
-        "Detects and tracks emotional states throughout conversations including joy, frustration, interest, and hesitation.",
-      color: "bg-pink-100 text-pink-600",
-    },
-    {
-      icon: MessageSquare,
-      title: "Clarity Analysis",
-      description:
-        "Measures communication effectiveness, identifies objections, and tracks how well messages are conveyed during calls.",
-      color: "bg-indigo-100 text-indigo-600",
     },
   ];
 
