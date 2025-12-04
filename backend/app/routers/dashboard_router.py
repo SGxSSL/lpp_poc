@@ -223,12 +223,12 @@ async def get_dashboard_data(db: AsyncSession = Depends(get_db)):
     
     # Dominant emotion distribution
     emotion_result = await db.execute(
-        select(UnstructuredAnalysis.dominant_emotion, func.count(UnstructuredAnalysis.id).label('count'))
+        select(func.lower(UnstructuredAnalysis.dominant_emotion).label('emotion'), func.count(UnstructuredAnalysis.id).label('count'))
         .where(UnstructuredAnalysis.dominant_emotion.isnot(None))
-        .group_by(UnstructuredAnalysis.dominant_emotion)
+        .group_by(func.lower(UnstructuredAnalysis.dominant_emotion))
     )
     emotion_distribution = [
-        EmotionDistribution(emotion=row[0], count=row[1])
+        EmotionDistribution(emotion=row[0].capitalize() if row[0] else None, count=row[1])
         for row in emotion_result.all()
     ]
     
