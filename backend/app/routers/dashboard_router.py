@@ -409,16 +409,19 @@ async def get_dashboard_data(db: AsyncSession = Depends(get_db)):
     )
     
     # === PRIORITY LEADS ===
-    # Get leads with high interest or good credit, with latest analysis
+    # Get leads sorted by their calculated lead score (from lead_scores table)
     priority_leads_query = (
-        select(Lead, UnstructuredAnalysis.conversion_probability, UnstructuredAnalysis.trust_score)
+        select(
+            Lead, 
+            LeadScore.score,
+            UnstructuredAnalysis.conversion_probability, 
+            UnstructuredAnalysis.trust_score
+        )
+        .outerjoin(LeadScore, Lead.id == LeadScore.lead_id)
         .outerjoin(CallLog, Lead.id == CallLog.lead_id)
         .outerjoin(UnstructuredAnalysis, CallLog.id == UnstructuredAnalysis.call_id)
-        .where((Lead.interest_level >= 7) | (Lead.credit_score >= 700))
-        .order_by(
-            desc(Lead.interest_level),
-            desc(Lead.credit_score)
-        )
+        .where(LeadScore.score.isnot(None))
+        .order_by(desc(LeadScore.score))
         .limit(10)
     )
     
@@ -430,6 +433,10 @@ async def get_dashboard_data(db: AsyncSession = Depends(get_db)):
     
     for row in priority_rows:
         lead = row[0]
+        lead_score = row[1]
+        conversion_prob = row[2]
+        trust_score = row[3]
+        
         if lead.id not in seen_lead_ids:
             priority_leads.append(PriorityLead(
                 id=lead.id,
@@ -439,11 +446,12 @@ async def get_dashboard_data(db: AsyncSession = Depends(get_db)):
                 status=lead.status,
                 interest_level=lead.interest_level,
                 credit_score=lead.credit_score,
+                lead_score=lead_score,
                 source=lead.source,
                 last_contact_date=lead.last_contact_date,
                 created_at=lead.created_at,
-                conversion_probability=row[1],
-                trust_score=row[2]
+                conversion_probability=conversion_prob,
+                trust_score=trust_score
             ))
             seen_lead_ids.add(lead.id)
     

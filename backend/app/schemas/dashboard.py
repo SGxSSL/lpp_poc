@@ -109,6 +109,7 @@ class PriorityLead(BaseModel):
     status: Optional[str] = None
     interest_level: Optional[int] = None
     credit_score: Optional[int] = None
+    lead_score: Optional[float] = None
     source: Optional[str] = None
     last_contact_date: Optional[datetime] = None
     created_at: datetime

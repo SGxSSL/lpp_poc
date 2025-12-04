@@ -281,7 +281,7 @@ export default function DashboardPage() {
               Priority Leads
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              High interest or excellent credit score
+              Top 10 leads by calculated priority score
             </p>
           </div>
           <button
@@ -300,19 +300,19 @@ export default function DashboardPage() {
                   Lead Name
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
+                  Lead Score
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Interest
+                  Conversion
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Trust
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Credit Score
-                </th>
-                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Source
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Contact
@@ -332,13 +332,44 @@ export default function DashboardPage() {
                         <div className="font-medium text-gray-800">
                           {lead.name || "N/A"}
                         </div>
-                        {lead.interest_level >= 8 && (
+                        {lead.lead_score >= 80 && (
                           <Flame className="w-4 h-4 text-red-500" />
                         )}
                       </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {lead.lead_type || "Unknown"}
+                      </div>
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {lead.lead_type || "N/A"}
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-2xl font-bold ${
+                            lead.lead_score >= 80
+                              ? "text-green-600"
+                              : lead.lead_score >= 60
+                              ? "text-yellow-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {lead.lead_score
+                            ? Math.round(lead.lead_score)
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            lead.lead_score >= 80
+                              ? "bg-green-500"
+                              : lead.lead_score >= 60
+                              ? "bg-yellow-500"
+                              : "bg-gray-400"
+                          }`}
+                          style={{
+                            width: `${lead.lead_score || 0}%`,
+                          }}
+                        />
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <span
@@ -354,25 +385,18 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              lead.interest_level >= 8
-                                ? "bg-red-500"
-                                : lead.interest_level >= 5
-                                ? "bg-yellow-500"
-                                : "bg-blue-500"
-                            }`}
-                            style={{
-                              width: `${(lead.interest_level || 0) * 10}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">
-                          {lead.interest_level || 0}
-                        </span>
-                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        {lead.conversion_probability
+                          ? `${Math.round(lead.conversion_probability)}%`
+                          : "N/A"}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-sm font-medium text-gray-700">
+                        {lead.trust_score
+                          ? `${Math.round(lead.trust_score * 10)}%`
+                          : "N/A"}
+                      </span>
                     </td>
                     <td className="py-4 px-6">
                       <span
@@ -388,9 +412,6 @@ export default function DashboardPage() {
                       >
                         {lead.credit_score || "N/A"}
                       </span>
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {lead.source || "N/A"}
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-500">
                       {lead.last_contact_date
