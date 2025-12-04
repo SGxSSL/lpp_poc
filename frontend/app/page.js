@@ -157,7 +157,7 @@ export default function DashboardPage() {
       month: "short",
       day: "numeric",
     }),
-    conversion: item.avg_conversion * 100,
+    conversion: item.avg_conversion,
     count: item.count,
   }));
 
@@ -175,7 +175,7 @@ export default function DashboardPage() {
       .replace(/_/g, " ")
       .replace(/\b\w/g, (l) => l.toUpperCase()),
     count: item.count,
-    conversion: item.avg_conversion * 100,
+    conversion: item.avg_conversion,
     trust: item.avg_trust * 10,
   }));
 
@@ -216,7 +216,7 @@ export default function DashboardPage() {
     },
     {
       title: "Avg Conversion",
-      value: `${Math.round((metrics.avg_conversion_probability || 0) * 100)}%`,
+      value: `${Math.round(metrics.avg_conversion_probability || 0)}%`,
       icon: Target,
       color: "bg-yellow-100 text-yellow-600",
     },
