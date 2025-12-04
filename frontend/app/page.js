@@ -166,7 +166,7 @@ export default function DashboardPage() {
       month: "short",
       day: "numeric",
     }),
-    trust: item.avg_trust * 100,
+    trust: item.avg_trust * 10,
     count: item.count,
   }));
 
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       .replace(/\b\w/g, (l) => l.toUpperCase()),
     count: item.count,
     conversion: item.avg_conversion * 100,
-    trust: item.avg_trust * 100,
+    trust: item.avg_trust * 10,
   }));
 
   const COLORS = [
@@ -222,19 +222,19 @@ export default function DashboardPage() {
     },
     {
       title: "Avg Trust Score",
-      value: ((metrics.avg_trust_score || 0) * 100).toFixed(0) + "%",
+      value: ((metrics.avg_trust_score || 0) * 10).toFixed(0) + "%",
       icon: Shield,
       color: "bg-teal-100 text-teal-600",
     },
     {
       title: "Avg Clarity",
-      value: ((metrics.avg_clarity_score || 0) * 100).toFixed(0) + "%",
+      value: ((metrics.avg_clarity_score || 0) * 10).toFixed(0) + "%",
       icon: MessageSquare,
       color: "bg-purple-100 text-purple-600",
     },
     {
       title: "Avg Empathy",
-      value: ((metrics.avg_empathy_score || 0) * 100).toFixed(0) + "%",
+      value: ((metrics.avg_empathy_score || 0) * 10).toFixed(0) + "%",
       icon: Heart,
       color: "bg-pink-100 text-pink-600",
     },
@@ -655,10 +655,7 @@ export default function DashboardPage() {
 
       {/* AI Insights Summary */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-
         <div className="flex flex-row gap-6">
-          
-
           <div className="flex-1">
             <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-600" />
