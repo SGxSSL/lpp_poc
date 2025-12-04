@@ -43,8 +43,8 @@ async def calculate_lead_score(lead_id: int, db: AsyncSession):
     # -----------------------------
     # 1️⃣ Structured data weights
     # -----------------------------
-    credit_score_factor = min((lead.credit_score or 0) / 850 * 10, 10)
-    interest_factor = (lead.interest_level or 0) * 2
+    credit_score_factor = (lead.credit_score or 0) / 850 * 10
+    interest_factor = (lead.interest_level or 0)  # Already 0-10 scale
     duration_factor = 5 if (call.duration_minutes or 0) > 10 else 2
     status_bonus = 5 if lead.status and lead.status.lower() in ["qualified", "active"] else 0
 
